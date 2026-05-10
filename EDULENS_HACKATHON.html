@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduLens AI - منصة تحليل جودة المقررات بالذكاء الاصطناعي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.45.0/dist/apexcharts.min.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e293b;
+            --accent: #3b82f6;
+            --accent-2: #8b5cf6;
+            --accent-3: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --light: #f1f5f9;
+            --white: #ffffff;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            direction: rtl;
+            background: linear-gradient(135deg, #0f172a 0%, #1a1f35 50%, #2d1b4e 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        /* ===== ANIMATED BACKGROUND ===== */
+        .background-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.1;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .blob-1 {
+            width: 500px;
+            height: 500px;
+            background: #3b82f6;
+            top: -200px;
+            right: -100px;
+        }
+
+        .blob-2 {
+            width: 400px;
+            height: 400px;
+            background: #ec4899;
+            bottom: -150px;
+            left: -100px;
+            animation-delay: 5s;
+        }
+
+        .blob-3 {
+            width: 350px;
+            height: 350px;
+            background: #8b5cf6;
+            top: 50%;
+            right: 10%;
+            animation-delay: 10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(50px) rotate(180deg); }
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .app {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 320px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(148, 163, 184, 0.1);
+            padding: 40px 0;
+            overflow-y: auto;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 100;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 10px;
+        }
+
+        .logo {
+            padding: 0 30px;
+            margin-bottom: 50px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .logo-icon {
+            font-size: 48px;
+            display: block;
+            animation: pulse 2.5s ease-in-out infinite;
+            margin-bottom: 15px;
+        }
+
+        .logo h1 {
+            font-size: 28px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #3b82f6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .logo p {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 8px;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin: 0;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 30px;
+            color: #cbd5e1;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #3b82f6, #ec4899);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #e0f2fe;
+        }
+
+        .nav-link:hover::before,
+        .nav-link.active::before {
+            transform: scaleY(1);
+        }
+
+        .nav-link.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            min-width: 24px;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            margin-left: 320px;
+            flex: 1;
+            padding: 60px 60px;
+            overflow-y: auto;
+        }
+
+        .main-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 10px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== HEADER ===== */
+        .page-header {
+            margin-bottom: 50px;
+        }
+
+        .page-header h1 {
+            font-size: 48px;
+            font-weight: 900;
+            color: #f1f5f9;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+        }
+
+        .page-header p {
+            font-size: 15px;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 20px;
+            padding: 40px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover {
+            background: rgba(30, 41, 59, 0.95);
+            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(59, 130, 246, 0.15);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        /* ===== GRID SYSTEMS ===== */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        /* ===== METRIC CARDS ===== */
+        .metric-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .metric-card:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+            border-color: rgba(59, 130, 246, 0.4);
+            transform: translateY(-5px);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .metric-value {
+            font-size: 42px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #3b82f6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .metric-change {
+            font-size: 13px;
+            color: #10b981;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        /* ===== COURSES GRID ===== */
+        .course-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .course-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 30px 60px rgba(59, 130, 246, 0.2);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+        }
+
+        .course-header {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            padding: 30px;
+            min-height: 130px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .course-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .course-code {
+            font-size: 12px;
+            opacity: 0.85;
+            letter-spacing: 1px;
+        }
+
+        .course-body {
+            padding: 30px;
+        }
+
+        .course-meta {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .meta-item {
+            text-align: center;
+        }
+
+        .meta-label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .meta-value {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .progress-wrapper {
+            margin-bottom: 20px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(148, 163, 184, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #ec4899);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 10px;
+        }
+
+        .course-action {
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .course-action:hover {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            border-color: transparent;
+            transform: scale(1.02);
+        }
+
+        /* ===== ANALYSIS SECTION ===== */
+        .analysis-section {
+            margin-top: 40px;
+        }
+
+        .analysis-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .gap-item {
+            padding: 20px;
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .gap-title {
+            font-weight: 700;
+            color: #fca5a5;
+            margin-bottom: 5px;
+        }
+
+        .gap-desc {
+            font-size: 14px;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        .recommendation-item {
+            padding: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid #10b981;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .recommendation-text {
+            font-size: 14px;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1f35, #2d1b4e);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 24px;
+            padding: 50px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.5);
+            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #94a3b8;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+
+        .modal-close:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            transform: rotate(90deg);
+        }
+
+        .modal-title {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 15px;
+            color: #f1f5f9;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            box-shadow: 0 15px 35px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 50px rgba(59, 130, 246, 0.3);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1200px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .grid-3 { grid-template-columns: 1fr 1fr; }
+            .main-content { padding: 40px; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 280px;
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 30px 20px;
+            }
+
+            .page-header h1 {
+                font-size: 32px;
+            }
+
+            .grid-3 { grid-template-columns: 1fr; }
+            .grid-4 { grid-template-columns: 1fr; }
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #86efac;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(59, 130, 246, 0.4);
+            border-radius: 16px;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+        }
+
+        .upload-area:hover {
+            border-color: rgba(59, 130, 246, 0.7);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+        }
+
+        .upload-area h3 {
+            color: #e0f2fe;
+            margin-bottom: 12px;
+            font-size: 22px;
+        }
+
+        .upload-area p {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .quality-indicator {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        .quality-excellent {
+            background: rgba(16, 185, 129, 0.2);
+            color: #86efac;
+        }
+
+        .quality-good {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        .quality-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fcd34d;
+        }
+
+        .quality-poor {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        /* ══ CHARTS ════════════════════════════════════════════════════ */
+        .chart-container { position:relative; width:100%; }
+
+        /* ══ WHAT-IF ═══════════════════════════════════════════════════ */
+        .slider-row { margin-bottom:20px; }
+        .slider-label { display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px; color:#cbd5e1; }
+        .slider-label span { color:#3b82f6; font-weight:700; }
+        input[type=range] {
+            -webkit-appearance:none; width:100%; height:6px;
+            background:rgba(148,163,184,.2); border-radius:10px; outline:none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance:none; width:20px; height:20px; border-radius:50%;
+            background:linear-gradient(135deg,#3b82f6,#8b5cf6); cursor:pointer;
+            box-shadow:0 2px 8px rgba(59,130,246,.4);
+        }
+        .whatif-result {
+            background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(20,184,166,.1));
+            border:1px solid rgba(16,185,129,.3); border-radius:14px; padding:25px; text-align:center; margin-top:25px;
+        }
+        .whatif-score { font-size:58px; font-weight:900; background:linear-gradient(135deg,#10b981,#3b82f6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .whatif-badge { display:inline-block; background:rgba(16,185,129,.2); color:#86efac; padding:5px 16px; border-radius:20px; font-weight:700; font-size:14px; margin-top:8px; }
+
+        /* ══ COMPARISON ════════════════════════════════════════════════ */
+        .compare-select {
+            background:rgba(30,41,59,.8); border:1px solid rgba(148,163,184,.2);
+            color:#e2e8f0; padding:12px 16px; border-radius:10px; font-size:14px;
+            font-family:inherit; width:100%; outline:none; cursor:pointer;
+        }
+        .compare-select:focus { border-color:rgba(59,130,246,.5); }
+        .compare-stat-row { display:grid; grid-template-columns:1fr auto 1fr; gap:15px; align-items:center; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid rgba(148,163,184,.08); }
+        .compare-label { font-size:12px; color:#64748b; text-align:center; margin-bottom:4px; }
+        .compare-val-a { font-size:20px; font-weight:800; color:#3b82f6; text-align:right; }
+        .compare-val-b { font-size:20px; font-weight:800; color:#ec4899; text-align:left; }
+        .compare-key   { font-size:12px; color:#94a3b8; text-align:center; }
+        .compare-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+        .compare-bar-name { font-size:12px; color:#94a3b8; width:80px; text-align:center; flex-shrink:0; }
+        .compare-bar-track { flex:1; height:8px; background:rgba(148,163,184,.1); border-radius:10px; overflow:hidden; }
+        /* ===== HISTORY PAGE ===== */
+        .history-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 16px;
+            padding: 28px 35px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .history-card:hover {
+            border-color: rgba(59, 130, 246, 0.4);
+            background: rgba(30, 41, 59, 0.95);
+            transform: translateX(-4px);
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .history-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+        .history-date {
+            font-size: 13px;
+            color: #64748b;
+            background: rgba(148,163,184,0.1);
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+        .history-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .history-stat {
+            background: rgba(59,130,246,0.08);
+            border: 1px solid rgba(59,130,246,0.15);
+            border-radius: 10px;
+            padding: 10px 18px;
+            text-align: center;
+            min-width: 100px;
+        }
+        .history-stat-label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px; }
+        .history-stat-value { font-size: 20px; font-weight: 800; background: linear-gradient(135deg,#3b82f6,#ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .history-courses-row {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(148,163,184,0.1);
+            display: none;
+        }
+        .history-courses-row.open { display: block; }
+        .history-course-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .history-course-name { font-size: 13px; color: #cbd5e1; width: 260px; flex-shrink: 0; }
+        .history-course-track { flex: 1; height: 8px; background: rgba(148,163,184,0.1); border-radius: 10px; overflow: hidden; }
+        .history-course-fill { height: 100%; background: linear-gradient(90deg,#3b82f6,#ec4899); border-radius: 10px; transition: width 0.6s ease; }
+        .history-course-pct { font-size: 13px; font-weight: 700; color: #e0f2fe; width: 45px; text-align: left; flex-shrink:0; }
+        .badge-improvement { background: rgba(16,185,129,0.2); color: #86efac; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .badge-decline     { background: rgba(239,68,68,0.2);  color: #fca5a5; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .empty-history { text-align:center; padding: 80px 40px; color: #64748b; }
+        .empty-history-icon { font-size: 64px; margin-bottom: 20px; display: block; }
+
+
+        /* ══ LOADING OVERLAY ═══════════════════════════════════════════ */
+        #loadingOverlay {
+            position:fixed; inset:0; z-index:99999;
+            background:linear-gradient(135deg,#0f172a,#1a1f35,#2d1b4e);
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            transition:opacity .5s ease;
+        }
+        #loadingOverlay.fade-out { opacity:0; pointer-events:none; }
+        .loader-logo { font-size:64px; margin-bottom:20px; animation:pulse 2s infinite; }
+        .loader-title { font-size:28px; font-weight:900;
+            background:linear-gradient(135deg,#3b82f6,#ec4899);
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+            margin-bottom:10px; }
+        .loader-sub { color:#64748b; font-size:14px; margin-bottom:40px; }
+        .loader-bar-wrap { width:280px; height:4px; background:rgba(148,163,184,.15); border-radius:10px; overflow:hidden; }
+        .loader-bar { height:100%; background:linear-gradient(90deg,#3b82f6,#ec4899); border-radius:10px;
+            animation:loadBar 2s ease forwards; }
+        @keyframes loadBar { from{width:0} to{width:100%} }
+        .loader-status { color:#64748b; font-size:13px; margin-top:15px; }
+        /* Firebase badge on dashboard */
+        .firebase-badge {
+            display:inline-flex; align-items:center; gap:6px;
+            background:rgba(255,160,0,.1); border:1px solid rgba(255,160,0,.25);
+            color:#fbbf24; padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600;
+        }
+        .firebase-dot { width:7px; height:7px; border-radius:50%; background:#10b981; animation:pulse 1.5s infinite; display:inline-block; }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <span class="loader-logo">🧠</span>
+        <div class="loader-title">EduLens AI</div>
+        <div class="loader-sub">جاري تحميل البيانات من Firebase...</div>
+        <div class="loader-bar-wrap"><div class="loader-bar"></div></div>
+        <div class="loader-status" id="loaderStatus">🔥 جاري الاتصال بقاعدة البيانات...</div>
+    </div>
+
+    <div class="background-animation">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="app">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🧠</span>
+                <h1>EduLens</h1>
+                <p>AI ANALYTICS</p>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" onclick="showPage('dashboard')">
+                        <span class="nav-icon">📊</span>
+                        <span>لوحة التحكم</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('courses')">
+                        <span class="nav-icon">📚</span>
+                        <span>المقررات</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('analysis')">
+                        <span class="nav-icon">🔍</span>
+                        <span>التحليلات المتقدمة</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('gaps')">
+                        <span class="nav-icon">⚠️</span>
+                        <span>الفجوات والتحسينات</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('reports')">
+                        <span class="nav-icon">📈</span>
+                        <span>التقارير</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showPage('history')">
+                        <span class="nav-icon">🕘</span>
+                        <span>التحليلات السابقة</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- ===== DASHBOARD PAGE ===== -->
+            <div id="dashboard" class="page active">
+                <div class="page-header">
+                    <h1>📊 لوحة التحكم الذكية</h1>
+                    <p>نظرة عامة على جودة المقررات والبيانات التحليلية في الوقت الفعلي</p>
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:15px; margin-bottom:30px;">
+                    <div class="alert alert-info" style="margin:0; flex:1;">
+                        ✨ منصة EduLens AI تحلل 6 مقررات بـ 418 طالب من خلال الذكاء الاصطناعي
+                        &nbsp;&nbsp;<span class="firebase-badge"><span class="firebase-dot"></span>متصل بـ Firebase</span>
+                    </div>
+                    <button class="btn btn-primary" id="dashAnalyzeBtn" onclick="runAnalysis()" style="white-space:nowrap; padding:14px 28px;">
+                        🤖 تحليل جديد
+                    </button>
+                </div>
+
+                <div class="grid-3">
+                    <div class="metric-card">
+                        <span class="metric-label">🎯 متوسط جودة المقررات</span>
+                        <span class="metric-value">82.5%</span>
+                        <span class="metric-change">↑ تحسن بنسبة 8.3% عن الفصل السابق</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">📚 عدد المقررات المحللة</span>
+                        <span class="metric-value">6</span>
+                        <span class="metric-change">418 طالب في المجموع</span>
+                    </div>
+                    <div class="metric-card">
+                        <span class="metric-label">✅ معدل النجاح</span>
+                        <span class="metric-value">87.3%</span>
+                        <span class="metric-change">54 طالب يحتاجون دعماً إضافياً</span>
+                    </div>
+                </div>
+
+
+                <div class="grid-2" style="margin-bottom:40px;">
+                    <div class="card">
+                        <h3 class="analysis-title">📊 جودة المقررات</h3>
+                        <div class="chart-container" style="height:240px;">
+                            <canvas id="qualityBarChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="analysis-title">🥧 توزيع مستويات الجودة</h3>
+                        <div class="chart-container" style="height:240px;">
+                            <canvas id="qualityDonutChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="analysis-title">🔥 أهم الاكتشافات من الذكاء الاصطناعي</h2>
+                    <div style="line-height: 2.2;">
+                        <p style="color: #cbd5e1; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">🤖 <strong>التحليل الآلي:</strong> النظام اكتشف 12 فجوة رئيسية بين مخرجات التعلم وطرق التدريس والتقييم</p>
+                        <p style="color: #cbd5e1; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">📈 <strong>التنبؤ الذكي:</strong> توقع مشاكل أداء الطلاب قبل الامتحانات النهائية بنسبة دقة 91%</p>
+                        <p style="color: #cbd5e1; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(148, 163, 184, 0.1);">💡 <strong>التوصيات المخصصة:</strong> توليد 24 توصية تطويرية ذكية مبنية على تحليل البيانات الفعلية</p>
+                        <p style="color: #cbd5e1;">🎯 <strong>معدل التحسن:</strong> تطبيق التوصيات أدى إلى تحسن 8.3% في جودة المقررات خلال فصل واحد</p>
+                    </div>
+                </div>
+
+                <div class="grid-2" style="margin-top: 40px;">
+                    <div class="card">
+                        <h3 class="analysis-title">📊 مؤشرات توافق المخرجات</h3>
+                        <div style="line-height: 2.2;">
+                            <p style="color: #cbd5e1; margin-bottom: 12px;"><strong>توافق المخرجات:</strong> <span style="color: #3b82f6; font-weight: 700;">85%</span></p>
+                            <p style="color: #cbd5e1; margin-bottom: 12px;"><strong>كفاءة التدريس:</strong> <span style="color: #10b981; font-weight: 700;">88%</span></p>
+                            <p style="color: #cbd5e1; margin-bottom: 12px;"><strong>فعالية التقييم:</strong> <span style="color: #f59e0b; font-weight: 700;">81%</span></p>
+                            <p style="color: #cbd5e1;"><strong>رضا الطلاب:</strong> <span style="color: #ec4899; font-weight: 700;">84%</span></p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="analysis-title">🏆 أفضل 3 مقررات</h3>
+                        <div style="line-height: 2.2;">
+                            <p style="color: #cbd5e1; margin-bottom: 12px;">🥇 <strong>مقدمة نظم المعلومات الإدارية (MIS 242):</strong> <span style="color: #10b981; font-weight: 700;">92%</span></p>
+                            <p style="color: #cbd5e1; margin-bottom: 12px;">🥈 <strong>نظم المعلومات الإدارية (MIS 361):</strong> <span style="color: #3b82f6; font-weight: 700;">89%</span></p>
+                            <p style="color: #cbd5e1;">🥉 <strong>مقدمة في التقنية (MIS 110):</strong> <span style="color: #8b5cf6; font-weight: 700;">85%</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== COURSES PAGE ===== -->
+            <div id="courses" class="page">
+                <div class="page-header">
+                    <h1>📚 المقررات تحت المراقبة</h1>
+                    <p>6 مقررات يتم تحليلها بالذكاء الاصطناعي بشكل مستمر</p>
+                </div>
+
+                <div id="coursesGrid" class="grid-4"></div>
+
+<!-- مقارنة بين مقررين -->
+                <div class="card" style="margin-top:40px;">
+                    <h3 class="analysis-title">⚖️ مقارنة بين مقررين</h3>
+                    <div class="grid-2" style="margin-bottom:25px;">
+                        <div>
+                            <p style="color:#94a3b8;font-size:13px;margin-bottom:8px;">المقرر الأول</p>
+                            <select class="compare-select" id="cmpA" onchange="runComparison()">
+                                <option value="">— اختر مقرراً —</option>
+                            </select>
+                        </div>
+                        <div>
+                            <p style="color:#94a3b8;font-size:13px;margin-bottom:8px;">المقرر الثاني</p>
+                            <select class="compare-select" id="cmpB" onchange="runComparison()">
+                                <option value="">— اختر مقرراً —</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="compareResult" style="display:none;">
+                        <div class="grid-2">
+                            <div id="compareStats" style="display:flex;flex-direction:column;justify-content:center;"></div>
+                            <div class="chart-container" style="height:280px;">
+                                <canvas id="compareRadarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="compareEmpty" style="text-align:center;padding:30px;color:#64748b;">
+                        اختر مقررين من القائمة أعلاه لعرض المقارنة
+                    </div>
+                </div>
+            </div>
+
+                        <!-- ===== ANALYSIS PAGE ===== -->
+            <div id="analysis" class="page">
+                <div class="page-header">
+                    <h1>🔍 التحليلات المتقدمة</h1>
+                    <p>تحليل عميق لجودة المقررات من خلال الذكاء الاصطناعي</p>
+                </div>
+
+                <div class="card">
+                    <h3 class="analysis-title">🤖 كيف يعمل الذكاء الاصطناعي</h3>
+                    <div style="line-height: 2.2;">
+                        <p style="color: #cbd5e1; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(148, 163, 184, 0.1);"><strong>1. معالجة اللغة الطبيعية (NLP):</strong> يحلل النظام توصيف المقررات وأهداف التعلم باستخدام معالجة اللغة الطبيعية لفهم المحتوى والمقاصد</p>
+                        <p style="color: #cbd5e1; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(148, 163, 184, 0.1);"><strong>2. تحليل البيانات:</strong> يجمع البيانات من نتائج الطلاب والاختبارات والواجبات ويحللها بتقنيات إحصائية متقدمة</p>
+                        <p style="color: #cbd5e1; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(148, 163, 184, 0.1);"><strong>3. كشف الفجوات:</strong> يقارن بين مخرجات التعلم المطلوبة وطرق التدريس والتقييم المستخدمة لاكتشاف الفجوات</p>
+                        <p style="color: #cbd5e1;"><strong>4. التنبؤ والتوصيات:</strong> ينبئ بالمشاكل المحتملة ويقترح توصيات تطويرية مخصصة لكل مقرر</p>
+                    </div>
+                </div>
+
+                <div class="grid-2" style="margin-top: 40px;">
+                    <div class="card">
+                        <h3 class="analysis-title">📊 مؤشرات الأداء الرئيسية</h3>
+                        <div style="line-height: 2.5;">
+                            <p style="color: #cbd5e1;"><strong>مؤشر التوافق:</strong> <span style="color: #3b82f6; font-weight: 700; font-size: 18px;">85%</span></p>
+                            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 15px;">نسبة توافق المخرجات مع طرق التدريس</p>
+                            
+                            <p style="color: #cbd5e1;"><strong>مؤشر الكفاءة:</strong> <span style="color: #10b981; font-weight: 700; font-size: 18px;">88%</span></p>
+                            <p style="color: #94a3b8; font-size: 12px;">كفاءة التقييم في قياس المخرجات</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="analysis-title">📈 معدل التحسن</h3>
+                        <div style="line-height: 2.5;">
+                            <p style="color: #cbd5e1;"><strong>قبل التحليل:</strong> <span style="color: #94a3b8;">75.2%</span></p>
+                            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 15px;">متوسط جودة المقررات</p>
+                            
+                            <p style="color: #cbd5e1;"><strong>بعد التحليل والتحسين:</strong> <span style="color: #10b981; font-weight: 700; font-size: 18px;">↑ 82.5% (+8.3%)</span></p>
+                            <p style="color: #94a3b8; font-size: 12px;">تحسن في جودة المقررات</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تحليل ماذا لو -->
+                <div class="card" style="margin-top:40px;">
+                    <h3 class="analysis-title">🔮 تحليل "ماذا لو" — محاكاة التحسين</h3>
+                    <p style="color:#94a3b8;font-size:14px;margin-bottom:25px;">حرّك الأشرطة لمحاكاة أثر تطبيق التوصيات على جودة المقرر المختار</p>
+
+                    <div style="margin-bottom:20px;">
+                        <p style="color:#94a3b8;font-size:13px;margin-bottom:8px;">المقرر المستهدف:</p>
+                        <select class="compare-select" id="whatifCourse" onchange="calcWhatIf()" style="max-width:350px;">
+                        </select>
+                    </div>
+
+                    <div class="slider-row">
+                        <div class="slider-label">📚 إضافة مشاريع عملية <span id="v1">0%</span></div>
+                        <input type="range" id="s1" min="0" max="15" value="0" oninput="calcWhatIf()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">👥 تعليم تعاوني وأقران <span id="v2">0%</span></div>
+                        <input type="range" id="s2" min="0" max="10" value="0" oninput="calcWhatIf()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">📝 مراجعة معايير التقييم <span id="v3">0%</span></div>
+                        <input type="range" id="s3" min="0" max="8" value="0" oninput="calcWhatIf()">
+                    </div>
+                    <div class="slider-row">
+                        <div class="slider-label">🎯 دعم الطلاب الضعفاء <span id="v4">0%</span></div>
+                        <input type="range" id="s4" min="0" max="7" value="0" oninput="calcWhatIf()">
+                    </div>
+
+                    <div class="whatif-result">
+                        <p style="color:#94a3b8;font-size:13px;margin-bottom:5px;">الجودة المتوقعة بعد التطبيق</p>
+                        <div class="whatif-score" id="whatifScore">—</div>
+                        <div id="whatifBadge"></div>
+                        <p id="whatifDesc" style="color:#94a3b8;font-size:13px;margin-top:12px;"></p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ===== GAPS PAGE ===== -->
+            <div id="gaps" class="page">
+                <div class="page-header">
+                    <h1>⚠️ الفجوات المكتشفة والتحسينات الموصى بها</h1>
+                    <p>نتائج التحليل الذكي للمقررات الستة</p>
+                </div>
+
+                <div class="alert alert-info">
+                    🤖 تم اكتشاف 12 فجوة رئيسية من خلال تحليل البيانات والذكاء الاصطناعي
+                </div>
+
+                <div class="card" style="margin-bottom: 40px;">
+                    <h3 class="analysis-title">⚠️ الفجوات المكتشفة</h3>
+                    
+                    <h4 style="color: #fca5a5; margin-top: 25px; margin-bottom: 15px; font-weight: 700;">في مقرر برمجة الحاسب 2 (MIS 354):</h4>
+                    <div class="gap-item">
+                        <div class="gap-title">🔴 عدم توافق المخرجات مع طرق التدريس</div>
+                        <div class="gap-desc">المقرر يحتوي على 6 مخرجات تعلم لكن يستخدم فقط 3 طرق تدريس. الفجوة في تغطية المخرجات الـ 3 الأخرى.</div>
+                    </div>
+                    <div class="gap-item">
+                        <div class="gap-title">🔴 تباين كبير في أداء الطلاب</div>
+                        <div class="gap-desc">الفرق بين أعلى درجة (92%) وأقل درجة (45%) هو 47%، مما يشير إلى وجود طلاب لم يفهموا المحتوى بشكل كافي.</div>
+                    </div>
+                    <div class="gap-item">
+                        <div class="gap-title">🔴 عدم توافق التقييم مع المخرجات</div>
+                        <div class="gap-desc">30% من مخرجات التعلم لا يتم تقييمها في الاختبار النهائي.</div>
+                    </div>
+
+                    <h4 style="color: #fca5a5; margin-top: 25px; margin-bottom: 15px; font-weight: 700;">في مقرر مقدمة في تطبيقات الحاسب (MIS 231):</h4>
+                    <div class="gap-item">
+                        <div class="gap-title">🟡 طرق تدريس محدودة</div>
+                        <div class="gap-desc">المقرر يعتمد على المحاضرات فقط. هناك حاجة لإضافة مشاريع عملية وتعلم تعاوني.</div>
+                    </div>
+                    <div class="gap-item">
+                        <div class="gap-title">🟡 متابعة ضعيفة للطلاب الضعفاء</div>
+                        <div class="gap-desc">23 طالب بحاجة إلى دعم إضافي ولم يحصلوا على التدخل المناسب في الوقت المناسب.</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="analysis-title">💡 التوصيات الذكية المقترحة</h3>
+                    
+                    <h4 style="color: #86efac; margin-top: 25px; margin-bottom: 15px; font-weight: 700;">للمقررات ذات جودة منخفضة (أقل من 80%):</h4>
+                    <div class="recommendation-item">
+                        <div class="recommendation-text">✅ <strong>لمقرر قواعد البيانات:</strong> أضف 3 طرق تدريس إضافية لتغطية المخرجات الناقصة: مشاريع عملية، دراسات حالات، وتعلم تعاوني. هذا سيرفع جودة المقرر من 72% إلى 85% بناءً على تجارب مماثلة.</div>
+                    </div>
+                    <div class="recommendation-item">
+                        <div class="recommendation-text">✅ <strong>لمقرر مقدمة في تطبيقات الحاسب (MIS 231):</strong> طبق برنامج دعم شامل للـ 23 طالب الضعفاء. استخدم جلسات إضافية، معلمين مساعدين، أو تعليم أقران. المتابعة المبكرة ستمنع 70% من حالات الفشل.</div>
+                    </div>
+                    <div class="recommendation-item">
+                        <div class="recommendation-text">✅ <strong>لجميع المقررات:</strong> عدّل معايير التقييم لضمان قياس جميع مخرجات التعلم. اجعل كل مخرج تعلم له على الأقل عنصر تقييم واحد في الامتحان.</div>
+                    </div>
+
+                    <h4 style="color: #86efac; margin-top: 25px; margin-bottom: 15px; font-weight: 700;">للمقررات ذات أداء ممتاز (أكثر من 90%):</h4>
+                    <div class="recommendation-item">
+                        <div class="recommendation-text">✅ <strong>حافظ على الاستراتيجية:</strong> مقرر خوارزميات متقدمة يحقق 92% - استمر في نفس أسلوب التدريس والتقييم. أضف تحديات إضافية للطلاب المتفوقين.</div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ===== REPORTS PAGE ===== -->
+            <div id="reports" class="page">
+                <div class="page-header">
+                    <h1>📈 التقارير والنتائج</h1>
+                    <p>تقارير شاملة عن جودة المقررات والتحسينات المطبقة</p>
+                </div>
+
+                <div class="alert alert-success">
+                    ✅ التقارير تُحدّث تلقائياً كل أسبوع بناءً على آخر البيانات
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h3 class="analysis-title">📊 ملخص الأداء</h3>
+                        <div style="line-height: 2.5; color: #cbd5e1;">
+                            <p><strong>الفترة الزمنية:</strong> <span style="color: #94a3b8;">الفصل الدراسي الأول 2024</span></p>
+                            <p><strong>عدد المقررات المحللة:</strong> <span style="color: #3b82f6; font-weight: 700;">6</span></p>
+                            <p><strong>عدد الطلاب:</strong> <span style="color: #10b981; font-weight: 700;">418</span></p>
+                            <p><strong>متوسط الجودة:</strong> <span style="color: #f59e0b; font-weight: 700;">82.5%</span></p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="analysis-title">📈 نتائج التحسن</h3>
+                        <div style="line-height: 2.5; color: #cbd5e1;">
+                            <p><strong>قبل التحليل:</strong> <span style="color: #94a3b8;">75.2%</span></p>
+                            <p><strong>بعد التحليل:</strong> <span style="color: #10b981; font-weight: 700;">82.5%</span></p>
+                            <p><strong>نسبة التحسن:</strong> <span style="color: #10b981; font-weight: 700;">↑ 8.3%</span></p>
+                            <p><strong>الفجوات المحددة:</strong> <span style="color: #ec4899; font-weight: 700;">12</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="analysis-title">💾 التقارير المتاحة للتحميل</h3>
+                    <div style="line-height: 2.2;">
+                        <p style="color: #cbd5e1; margin-bottom: 12px;">📄 <strong><u>تقرير جودة المقررات الشامل</u></strong> - يتضمن تحليل جميع المقررات والفجوات والتوصيات</p>
+                        <p style="color: #cbd5e1; margin-bottom: 12px;">📊 <strong><u>تقرير أداء الطلاب</u></strong> - توزيع الدرجات والطلاب الذين يحتاجون دعماً</p>
+                        <p style="color: #cbd5e1; margin-bottom: 12px;">🎯 <strong><u>تقرير التوافق بين المخرجات والتدريس</u></strong> - تحليل عميق لكل مقرر</p>
+                        <p style="color: #cbd5e1;">📈 <strong><u>تقرير معدل التحسن</u></strong> - مقارنة قبل وبعد تطبيق التوصيات</p>
+                    </div>
+                    <div style="margin-top: 25px; text-align: center;">
+                        <button class="btn btn-primary">📥 تحميل جميع التقارير (PDF)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== HISTORY PAGE ===== -->
+            <div id="history" class="page">
+                <div class="page-header">
+                    <h1>🕘 التحليلات السابقة</h1>
+                    <p>سجل كامل بجميع التحليلات التي أجريتها — انقر على أي تحليل لعرض تفاصيله</p>
+                </div>
+                <div id="historyList">
+                    <div class="empty-history">
+                        <span class="empty-history-icon">📂</span>
+                        <p style="font-size:18px; color:#94a3b8; margin-bottom:10px;">لا توجد تحليلات سابقة</p>
+                        <p style="font-size:14px;">ارفع البيانات وابدأ التحليل لتظهر هنا</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COURSE DETAIL MODAL -->
+    <div id="courseModal" class="modal" onclick="closeCourseDetail()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeCourseDetail()">✕</button>
+            <div id="courseDetail"></div>
+        </div>
+    </div>
+
+    <script>
+        const coursesData = {
+            'MIS110': {
+                name: 'مقدمة في التقنية',
+                code: 'MIS 110',
+                level: 'المستوى الأول',
+                students: 85,
+                avgGrade: 78,
+                quality: 85,
+                learningOutcomes: ['فهم أساسيات تقنية المعلومات', 'استخدام الحاسب في المجالات الإدارية', 'التعامل مع التطبيقات التقنية الأساسية'],
+                teachingMethods: ['محاضرات', 'تمارين عملية'],
+                assessmentMethods: ['اختبارات', 'مشاريع'],
+                gaps: ['طرق تدريس محدودة - فقط 2 طريقة لـ 3 مخرجات', 'بعض المخرجات لا تقيّمها الاختبارات'],
+                recommendations: ['أضف تعلم تعاوني ومشاريع فريقية', 'عدّل الاختبارات لتقيس جميع المخرجات', 'توفير ساعات إضافية للطلاب الضعفاء']
+            },
+            'MIS231': {
+                name: 'مقدمة في تطبيقات الحاسب',
+                code: 'MIS 231',
+                level: 'المستوى الثالث',
+                students: 72,
+                avgGrade: 81,
+                quality: 78,
+                learningOutcomes: ['استخدام تطبيقات Office المتقدمة', 'تحليل البيانات الإدارية', 'بناء قواعد بيانات أساسية'],
+                teachingMethods: ['محاضرات'],
+                assessmentMethods: ['اختبارات', 'واجبات'],
+                gaps: ['معتمد على المحاضرات فقط - لا توجد تطبيقات عملية واقعية', 'وجود 23 طالب يحتاجون دعماً إضافياً'],
+                recommendations: ['أضف مشاريع عملية على حالات حقيقية', 'طبق برنامج دعم للطلاب الضعفاء', 'استخدم معلمين مساعدين أو تعليم أقران']
+            },
+            'MIS242': {
+                name: 'مقدمة نظم المعلومات الإدارية',
+                code: 'MIS 242',
+                level: 'المستوى الرابع',
+                students: 65,
+                avgGrade: 87,
+                quality: 92,
+                learningOutcomes: ['فهم مفاهيم نظم المعلومات', 'تحليل متطلبات المنظمات', 'تصميم نظم المعلومات الإدارية'],
+                teachingMethods: ['محاضرات', 'دراسات حالة', 'مشاريع جماعية'],
+                assessmentMethods: ['اختبارات', 'مشاريع', 'عروض تقديمية'],
+                gaps: [],
+                recommendations: ['استمر في الاستراتيجية الحالية - الأداء ممتاز', 'أضف تحديات إضافية للطلاب المتفوقين', 'شارك الطلاب في مسابقات إقليمية']
+            },
+            'MIS354': {
+                name: 'برمجة الحاسب (2)',
+                code: 'MIS 354',
+                level: 'المستوى الخامس',
+                students: 58,
+                avgGrade: 76,
+                quality: 72,
+                learningOutcomes: ['البرمجة الكائنية التوجه', 'تطوير تطبيقات إدارية', 'حل المسائل البرمجية المتقدمة'],
+                teachingMethods: ['محاضرات'],
+                assessmentMethods: ['اختبارات'],
+                gaps: ['أكبر الفجوات: 6 مخرجات لكن 3 طرق تدريس فقط', 'تباين كبير في الأداء (الفرق 47%)', '30% من المخرجات لا تقيّمها الاختبارات'],
+                recommendations: ['أضف حتماً طرق تدريس: مشاريع عملية، دراسات حالات، تعلم تعاوني', 'عدّل الامتحان ليقيس جميع 6 مخرجات', 'برنامج دعم فوري للـ 10 طلاب الضعفاء - سيرفع الجودة من 72% إلى 85%']
+            },
+            'MIS361': {
+                name: 'نظم المعلومات الإدارية',
+                code: 'MIS 361',
+                level: 'المستوى السادس',
+                students: 91,
+                avgGrade: 84,
+                quality: 89,
+                learningOutcomes: ['تحليل وتصميم النظم الإدارية', 'إدارة مشاريع تقنية المعلومات', 'تطبيق نظم المعلومات في المنظمات'],
+                teachingMethods: ['محاضرات', 'مشاريع', 'ورش عمل'],
+                assessmentMethods: ['اختبارات', 'مشاريع', 'عروض'],
+                gaps: [],
+                recommendations: ['الأداء جيد جداً - استمر بنفس الاستراتيجية', 'زيادة عدد دراسات الحالة من الواقع السعودي', 'دعوة متخصصين من شركات التقنية للمحاضرات']
+            },
+            'MIS471': {
+                name: 'تطوير تطبيقات قواعد البيانات',
+                code: 'MIS 471',
+                level: 'المستوى السابع',
+                students: 48,
+                avgGrade: 79,
+                quality: 80,
+                learningOutcomes: ['تصميم قواعد بيانات متقدمة', 'تطوير تطبيقات الويب الإدارية', 'إدارة أمن قواعد البيانات'],
+                teachingMethods: ['محاضرات', 'مشاريع عملية'],
+                assessmentMethods: ['اختبارات', 'مشاريع'],
+                gaps: ['20% من المخرجات لا تقيّمها الاختبارات بشكل كافي'],
+                recommendations: ['راجع معايير التقييم لضمان قياس كل المخرجات', 'أضف مشاريع تطبيقية حقيقية لجهات حكومية', 'توفير بيئة تطوير متكاملة للطلاب']
+            }
+        };
+
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(pageName).classList.add('active');
+            document.querySelectorAll('.nav-link').forEach(l => {
+                const oc = l.getAttribute('onclick') || '';
+                if (oc.includes("'" + pageName + "'") || oc.includes('"' + pageName + '"')) {
+                    l.classList.add('active');
+                }
+            });
+        }
+
+        function showCourseDetail(courseCode) {
+            const course = coursesData[courseCode];
+            const gapsHtml = course.gaps.length > 0 
+                ? course.gaps.map(g => `<div class="gap-item"><div class="gap-desc">⚠️ ${g}</div></div>`).join('')
+                : '<p style="color: #10b981;">✅ لا توجد فجوات رئيسية في هذا المقرر</p>';
+            
+            const recsHtml = course.recommendations
+                .map((r, i) => `<div class="recommendation-item"><div class="recommendation-text">${i+1}. ${r}</div></div>`)
+                .join('');
+
+            const html = `
+                <h2 class="modal-title">${course.name}</h2>
+                <p style="color: #94a3b8; margin-bottom: 30px;">${course.code} • ${course.students} طالب • جودة: ${course.quality}%</p>
+                
+                <h3 class="analysis-title" style="font-size: 18px;">📚 مخرجات التعلم</h3>
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                    ${course.learningOutcomes.map(o => `<p style="color: #cbd5e1; margin-bottom: 8px;">✓ ${o}</p>`).join('')}
+                </div>
+
+                <h3 class="analysis-title" style="font-size: 18px;">⚠️ الفجوات المكتشفة</h3>
+                <div style="margin-bottom: 30px;">
+                    ${gapsHtml}
+                </div>
+
+                <h3 class="analysis-title" style="font-size: 18px;">💡 التوصيات الذكية</h3>
+                <div>
+                    ${recsHtml}
+                </div>
+            `;
+
+            document.getElementById('courseDetail').innerHTML = html;
+            document.getElementById('courseModal').classList.add('active');
+        }
+
+        function closeCourseDetail() {
+            document.getElementById('courseModal').classList.remove('active');
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // FIREBASE SETUP
+        // ═══════════════════════════════════════════════════════
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_VpS2S4TnKRmfVLYL4j1raWmKXbZcwDs",
+            authDomain: "edulens-dcbc9.firebaseapp.com",
+            projectId: "edulens-dcbc9",
+            storageBucket: "edulens-dcbc9.firebasestorage.app",
+            messagingSenderId: "290855822493",
+            appId: "1:290855822493:web:4aa91b942de03daf1c2074"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ── Mock seed data (inserted into Firebase on first load) ────────
+        const SEED_COURSES = {
+            MIS110: {
+                name: 'مقدمة في التقنية', code: 'MIS 110', level: 'المستوى الأول',
+                students: 85, avgGrade: 78, quality: 85,
+                learningOutcomes: ['فهم أساسيات تقنية المعلومات','استخدام الحاسب في المجالات الإدارية','التعامل مع التطبيقات التقنية الأساسية'],
+                teachingMethods: ['محاضرات','تمارين عملية'],
+                assessmentMethods: ['اختبارات','مشاريع'],
+                gaps: ['طرق تدريس محدودة - فقط طريقتان لـ 3 مخرجات','بعض المخرجات لا تقيّمها الاختبارات'],
+                recommendations: ['أضف تعلماً تعاونياً ومشاريع فريقية','عدّل الاختبارات لتقيس جميع المخرجات','وفّر ساعات إضافية للطلاب الضعفاء'],
+                studentBreakdown: { A:22, B:35, C:18, D:7, F:3 }
+            },
+            MIS231: {
+                name: 'مقدمة في تطبيقات الحاسب', code: 'MIS 231', level: 'المستوى الثالث',
+                students: 72, avgGrade: 81, quality: 78,
+                learningOutcomes: ['استخدام تطبيقات Office المتقدمة','تحليل البيانات الإدارية','بناء قواعد بيانات أساسية'],
+                teachingMethods: ['محاضرات'],
+                assessmentMethods: ['اختبارات','واجبات'],
+                gaps: ['معتمد على المحاضرات فقط - لا توجد تطبيقات عملية','23 طالب يحتاجون دعماً إضافياً'],
+                recommendations: ['أضف مشاريع عملية على حالات حقيقية','طبّق برنامج دعم للطلاب الضعفاء','استخدم معلمين مساعدين أو تعليم أقران'],
+                studentBreakdown: { A:18, B:30, C:15, D:6, F:3 }
+            },
+            MIS242: {
+                name: 'مقدمة نظم المعلومات الإدارية', code: 'MIS 242', level: 'المستوى الرابع',
+                students: 65, avgGrade: 87, quality: 92,
+                learningOutcomes: ['فهم مفاهيم نظم المعلومات','تحليل متطلبات المنظمات','تصميم نظم المعلومات الإدارية'],
+                teachingMethods: ['محاضرات','دراسات حالة','مشاريع جماعية'],
+                assessmentMethods: ['اختبارات','مشاريع','عروض تقديمية'],
+                gaps: [],
+                recommendations: ['استمر في الاستراتيجية الحالية - الأداء ممتاز','أضف تحديات إضافية للطلاب المتفوقين','شارك الطلاب في مسابقات إقليمية'],
+                studentBreakdown: { A:30, B:25, C:8, D:2, F:0 }
+            },
+            MIS354: {
+                name: 'برمجة الحاسب (2)', code: 'MIS 354', level: 'المستوى الخامس',
+                students: 58, avgGrade: 76, quality: 72,
+                learningOutcomes: ['البرمجة الكائنية التوجه','تطوير تطبيقات إدارية','حل المسائل البرمجية المتقدمة'],
+                teachingMethods: ['محاضرات'],
+                assessmentMethods: ['اختبارات'],
+                gaps: ['6 مخرجات مقابل 3 طرق تدريس فقط','تباين كبير في الأداء - الفرق 47%','30% من المخرجات لا تقيّمها الاختبارات'],
+                recommendations: ['أضف مشاريع عملية ودراسات حالة وتعلم تعاوني','عدّل الامتحان ليقيس جميع 6 مخرجات','برنامج دعم فوري للطلاب الضعفاء'],
+                studentBreakdown: { A:10, B:20, C:18, D:7, F:3 }
+            },
+            MIS361: {
+                name: 'نظم المعلومات الإدارية', code: 'MIS 361', level: 'المستوى السادس',
+                students: 91, avgGrade: 84, quality: 89,
+                learningOutcomes: ['تحليل وتصميم النظم الإدارية','إدارة مشاريع تقنية المعلومات','تطبيق نظم المعلومات في المنظمات'],
+                teachingMethods: ['محاضرات','مشاريع','ورش عمل'],
+                assessmentMethods: ['اختبارات','مشاريع','عروض'],
+                gaps: [],
+                recommendations: ['الأداء جيد جداً - استمر بنفس الاستراتيجية','زد دراسات الحالة من الواقع السعودي','ادعُ متخصصين من شركات التقنية'],
+                studentBreakdown: { A:35, B:38, C:12, D:4, F:2 }
+            },
+            MIS471: {
+                name: 'تطوير تطبيقات قواعد البيانات', code: 'MIS 471', level: 'المستوى السابع',
+                students: 48, avgGrade: 79, quality: 80,
+                learningOutcomes: ['تصميم قواعد بيانات متقدمة','تطوير تطبيقات الويب الإدارية','إدارة أمن قواعد البيانات'],
+                teachingMethods: ['محاضرات','مشاريع عملية'],
+                assessmentMethods: ['اختبارات','مشاريع'],
+                gaps: ['20% من المخرجات لا تقيّمها الاختبارات بشكل كافٍ'],
+                recommendations: ['راجع معايير التقييم لضمان قياس كل المخرجات','أضف مشاريع تطبيقية لجهات حكومية حقيقية','وفّر بيئة تطوير متكاملة للطلاب'],
+                studentBreakdown: { A:14, B:20, C:10, D:3, F:1 }
+            }
+        };
+
+        // ── Seed Firestore if empty ──────────────────────────────────────
+        async function seedFirebaseIfEmpty() {
+            const snap = await db.collection('courses').limit(1).get();
+            if (!snap.empty) return;                   // already seeded
+            setLoaderStatus('🌱 تهيئة البيانات للمرة الأولى...');
+            const batch = db.batch();
+            Object.entries(SEED_COURSES).forEach(([id, data]) => {
+                batch.set(db.collection('courses').doc(id), data);
+            });
+            const statsRef = db.collection('settings').doc('dashboard');
+            batch.set(statsRef, {
+                avgQuality: 82.5, successRate: 87.3,
+                totalStudents: 419, totalCourses: 6,
+                totalGaps: 12, totalRecommendations: 24,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await batch.commit();
+            console.log('Firebase seeded ✓');
+        }
+
+        // ── Load courses from Firestore → populate coursesData ───────────
+        async function loadCoursesFromFirebase() {
+            setLoaderStatus('📚 جاري تحميل المقررات...');
+            const snap = await db.collection('courses').get();
+            snap.forEach(doc => {
+                coursesData[doc.id] = { ...doc.data() };
+            });
+        }
+
+        // ── Run a new analysis (no file upload needed) ───────────────────
+        function runAnalysis() {
+            const btn = document.getElementById('dashAnalyzeBtn');
+            btn.disabled = true;
+            const steps = ['📥 قراءة البيانات...','🔍 كشف الفجوات...','🤖 توليد التوصيات...','📊 حساب الجودة...','✅ اكتمل!'];
+            let progress = 0;
+            const iv = setInterval(async () => {
+                progress += 20;
+                btn.textContent = `⏳ ${steps[Math.floor(progress/20)-1]} ${progress}%`;
+                if (progress >= 100) {
+                    clearInterval(iv);
+                    btn.textContent = '🤖 تحليل جديد';
+                    btn.disabled = false;
+
+                    const snapshot = generateNewAnalysis();
+                    applyAnalysisToCourses(snapshot);
+                    updateDashboardFromSnapshot(snapshot);
+                    await saveAnalysisToFirebase(snapshot);
+                    await renderHistoryPage();
+                    setTimeout(() => { initDashboardCharts(); populateCompareSelects(); }, 350);
+
+                    showToast('✅ تم التحليل وحفظ النتائج في Firebase');
+                }
+            }, 600);
+        }
+
+        // ── Save analysis snapshot to Firestore ──────────────────────────
+        async function saveAnalysisToFirebase(snapshot) {
+            try {
+                await db.collection('analyses').add({
+                    ...snapshot,
+                    dateObj: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                // Also update course quality values in Firestore
+                const batch = db.batch();
+                snapshot.courseResults.forEach(r => {
+                    batch.update(db.collection('courses').doc(r.key), {
+                        quality: r.quality, avgGrade: r.avgGrade
+                    });
+                });
+                await batch.commit();
+            } catch(e) { console.error('Firebase save error:', e); }
+        }
+
+        // ── Load history from Firestore ──────────────────────────────────
+        async function renderHistoryPage() {
+            const container = document.getElementById('historyList');
+            if (!container) return;
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:#64748b;">⏳ جاري التحميل...</div>';
+            try {
+                const snap = await db.collection('analyses').orderBy('dateObj','desc').limit(20).get();
+                if (snap.empty) {
+                    container.innerHTML = `<div class="empty-history">
+                        <span class="empty-history-icon">📂</span>
+                        <p style="font-size:18px;color:#94a3b8;margin-bottom:10px;">لا توجد تحليلات سابقة</p>
+                        <p style="font-size:14px;">اضغط "تحليل جديد" في لوحة التحكم لبدء أول تحليل</p>
+                    </div>`; return;
+                }
+                const items = [];
+                snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+                container.innerHTML = items.map((item, idx) => {
+                    const barsHtml = (item.courseResults || []).map(c => {
+                        const delta = c.quality - (c.prev || c.quality);
+                        const badge = Math.abs(delta) < 0.1 ? '' :
+                            delta > 0 ? `<span class="badge-improvement">↑ +${delta.toFixed(1)}%</span>` :
+                                        `<span class="badge-decline">↓ ${delta.toFixed(1)}%</span>`;
+                        return `<div class="history-course-bar">
+                            <span class="history-course-name">${c.code} - ${c.name}</span>
+                            <div class="history-course-track"><div class="history-course-fill" style="width:${c.quality}%"></div></div>
+                            <span class="history-course-pct">${c.quality}%</span>${badge}
+                        </div>`;
+                    }).join('');
+                    return `<div class="history-card" onclick="toggleHistory('h_${idx}')">
+                        <div class="history-header">
+                            <span class="history-title">📊 تحليل #${items.length - idx} — ${item.timestamp || 'الآن'}</span>
+                            <span class="history-date">${idx===0?'الأحدث':'سابق'}</span>
+                        </div>
+                        <div class="history-stats">
+                            <div class="history-stat"><span class="history-stat-label">متوسط الجودة</span><span class="history-stat-value">${item.avgQuality}%</span></div>
+                            <div class="history-stat"><span class="history-stat-label">معدل النجاح</span><span class="history-stat-value">${item.successRate}%</span></div>
+                            <div class="history-stat"><span class="history-stat-label">الفجوات</span><span class="history-stat-value">${item.totalGaps}</span></div>
+                            <div class="history-stat"><span class="history-stat-label">المقررات</span><span class="history-stat-value">${(item.courseResults||[]).length}</span></div>
+                        </div>
+                        <div class="history-courses-row" id="h_${idx}">${barsHtml}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) {
+                container.innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;">⚠️ تعذّر تحميل السجل من Firebase</div>';
+            }
+        }
+
+        // ── Toast notification ───────────────────────────────────────────
+        function showToast(msg) {
+            let t = document.getElementById('toastMsg');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'toastMsg';
+                t.style.cssText = 'position:fixed;bottom:30px;right:30px;z-index:9999;background:linear-gradient(135deg,#10b981,#14b8a6);color:#fff;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 8px 30px rgba(16,185,129,.4);transition:opacity .4s ease;';
+                document.body.appendChild(t);
+            }
+            t.textContent = msg; t.style.opacity = '1';
+            setTimeout(() => { t.style.opacity = '0'; }, 3500);
+        }
+
+        function setLoaderStatus(msg) {
+            const el = document.getElementById('loaderStatus');
+            if (el) el.textContent = msg;
+        }
+
+        // Generate slightly-varied analysis data each run
+        function generateNewAnalysis() {
+            const courseKeys = Object.keys(coursesData);
+            const courseResults = courseKeys.map(key => {
+                const base = coursesData[key];
+                const delta = (Math.random() * 10 - 3);                     // -3 to +7
+                const newQ  = Math.min(98, Math.max(50, base.quality + delta));
+                const newAG = Math.min(98, Math.max(50, base.avgGrade + (Math.random()*6-2)));
+                return { key, name: base.name, code: base.code, quality: parseFloat(newQ.toFixed(1)), avgGrade: parseFloat(newAG.toFixed(1)), prev: base.quality };
+            });
+            const avgQ      = parseFloat((courseResults.reduce((s,c)=>s+c.quality,0)/courseResults.length).toFixed(1));
+            const totalGaps = courseResults.filter(c => c.quality < 85).length * 2;
+            const now       = new Date();
+            return {
+                id:        Date.now(),
+                timestamp: now.toLocaleString('ar-SA'),
+                dateObj:   now.toISOString(),
+                avgQuality: avgQ,
+                successRate: parseFloat((87.3 + Math.random()*3).toFixed(1)),
+                totalGaps,
+                courseResults
+            };
+        }
+
+        // Push new quality values into coursesData & re-render course cards
+        function applyAnalysisToCourses(snapshot) {
+            snapshot.courseResults.forEach(r => {
+                if (coursesData[r.key]) {
+                    coursesData[r.key].quality  = r.quality;
+                    coursesData[r.key].avgGrade = r.avgGrade;
+                    // Update gaps list based on quality
+                    if (r.quality >= 88) {
+                        coursesData[r.key].gaps = [];
+                    } else if (r.quality >= 80) {
+                        coursesData[r.key].gaps = coursesData[r.key].gaps.slice(0, 1);
+                    }
+                }
+            });
+            renderCourseCards();
+        }
+
+        // Re-render all course cards from coursesData
+        function renderCourseCards() {
+            const colors = ['linear-gradient(135deg,#3b82f6,#0ea5e9)','linear-gradient(135deg,#ec4899,#f43f5e)','linear-gradient(135deg,#10b981,#14b8a6)','linear-gradient(135deg,#8b5cf6,#a855f7)','linear-gradient(135deg,#f59e0b,#d97706)','linear-gradient(135deg,#06b6d4,#0891b2)'];
+            const grid = document.getElementById('coursesGrid');
+            if (!grid) return;
+            grid.innerHTML = Object.entries(coursesData).map(([key, c], i) => {
+                const q = c.quality;
+                const qClass = q >= 88 ? 'quality-excellent' : q >= 80 ? 'quality-good' : q >= 70 ? 'quality-warning' : 'quality-poor';
+                const fillColor = q >= 88 ? 'linear-gradient(90deg,#10b981,#14b8a6)' : q >= 80 ? 'linear-gradient(90deg,#3b82f6,#8b5cf6)' : 'linear-gradient(90deg,#f59e0b,#ef4444)';
+                return `<div class="course-card" onclick="showCourseDetail('${key}')">
+                    <div class="course-header" style="background:${colors[i%colors.length]};">
+                        <h3 class="course-title">${c.name}</h3>
+                        <span class="course-code">${c.code} • ${c.level||''}</span>
+                    </div>
+                    <div class="course-body">
+                        <div class="course-meta">
+                            <div class="meta-item"><span class="meta-label">الطلاب</span><span class="meta-value">${c.students}</span></div>
+                            <div class="meta-item"><span class="meta-label">المتوسط</span><span class="meta-value">${c.avgGrade}%</span></div>
+                            <div class="meta-item"><span class="meta-label">الجودة</span><span class="meta-value">${q}%</span></div>
+                        </div>
+                        <div class="progress-wrapper">
+                            <div class="progress-header"><span>جودة المقرر</span><span>${q}%</span></div>
+                            <div class="progress-track"><div class="progress-fill" style="width:${q}%;background:${fillColor};"></div></div>
+                        </div>
+                        <div class="course-action">📊 عرض التفاصيل</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Update dashboard numbers + top-3 — called from runAnalysis
+        function updateDashboardFromSnapshot(snapshot) {
+            const metricCards = document.querySelectorAll('.metric-value');
+            const oldQ = parseFloat(metricCards[0]?.textContent) || 82.5;
+            const oldS = parseFloat(metricCards[2]?.textContent) || 87.3;
+            if (metricCards[0]) animateValue(metricCards[0], oldQ, snapshot.avgQuality, '%');
+            if (metricCards[2]) animateValue(metricCards[2], oldS, snapshot.successRate, '%');
+
+            // Update top-3 courses
+            const sorted = [...snapshot.courseResults].sort((a,b) => b.quality - a.quality);
+            const medals = ['🥇','🥈','🥉'];
+            const colors = ['#10b981','#3b82f6','#8b5cf6'];
+            const top3El = document.querySelector('#dashboard .grid-2 .card:last-child div');
+            if (top3El) {
+                top3El.innerHTML = sorted.slice(0,3).map((c,i) =>
+                    `<p style="color:#cbd5e1; margin-bottom:12px;">${medals[i]} <strong>${c.name} (${c.code}):</strong> <span style="color:${colors[i]};font-weight:700;">${c.quality}%</span></p>`
+                ).join('');
+            }
+        }
+
+        function toggleHistory(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('open');
+        }
+
+        // Navigate to a page from JS
+        function navToPage(pageName) {
+            showPage(pageName);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function animateValue(el, from, to, suffix) {
+            const duration = 1500;
+            const start = performance.now();
+            function update(time) {
+                const t = Math.min((time - start) / duration, 1);
+                el.textContent = (from + (to - from) * t).toFixed(1) + suffix;
+                if (t < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        // Init on load
+
+
+        // ═══════════════════════════════════════════════════════
+        // CHARTS
+        // ═══════════════════════════════════════════════════════
+        let barChart = null, donutChart = null, radarChart = null;
+
+        function initDashboardCharts() {
+            const keys    = Object.keys(coursesData);
+            const labels  = keys.map(k => coursesData[k].code);
+            const values  = keys.map(k => coursesData[k].quality);
+            const bgColors = values.map(v =>
+                v >= 88 ? 'rgba(16,185,129,.7)' : v >= 80 ? 'rgba(59,130,246,.7)' : v >= 70 ? 'rgba(245,158,11,.7)' : 'rgba(239,68,68,.7)'
+            );
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = 'Poppins';
+
+            // Bar chart
+            const bCtx = document.getElementById('qualityBarChart');
+            if (bCtx) {
+                bCtx.style.height = '220px';
+                if (barChart) barChart.destroy();
+                barChart = new Chart(bCtx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{ label: 'الجودة %', data: values, backgroundColor: bgColors, borderRadius: 8, borderSkipped: false }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { min: 0, max: 100, grid: { color: 'rgba(148,163,184,.1)' }, ticks: { callback: v => v + '%' } },
+                            x: { grid: { display: false } }
+                        },
+                        animation: { duration: 1000, easing: 'easeOutQuart' }
+                    }
+                });
+            }
+
+            // Donut chart
+            const dCtx = document.getElementById('qualityDonutChart');
+            if (dCtx) {
+                dCtx.style.height = '220px';
+                if (donutChart) donutChart.destroy();
+                const excellent = values.filter(v=>v>=88).length;
+                const good      = values.filter(v=>v>=80&&v<88).length;
+                const warning   = values.filter(v=>v>=70&&v<80).length;
+                const poor      = values.filter(v=>v<70).length;
+                donutChart = new Chart(dCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['ممتاز (88%+)', 'جيد (80-87%)', 'مقبول (70-79%)', 'ضعيف (<70%)'],
+                        datasets: [{ data: [excellent,good,warning,poor],
+                            backgroundColor: ['rgba(16,185,129,.8)','rgba(59,130,246,.8)','rgba(245,158,11,.8)','rgba(239,68,68,.8)'],
+                            borderWidth: 2, borderColor: '#1a1f35'
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { padding: 15, font: { size: 12 } } } },
+                        animation: { duration: 1000 }
+                    }
+                });
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // COMPARISON
+        // ═══════════════════════════════════════════════════════
+        function populateCompareSelects() {
+            ['cmpA','cmpB','whatifCourse'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const cur = sel.value;
+                sel.innerHTML = id === 'whatifCourse' ? '' : '<option value="">— اختر مقرراً —</option>';
+                Object.entries(coursesData).forEach(([k,c]) => {
+                    const opt = document.createElement('option');
+                    opt.value = k; opt.textContent = c.code + ' - ' + c.name;
+                    sel.appendChild(opt);
+                });
+                if (cur) sel.value = cur;
+            });
+            if (document.getElementById('whatifCourse') && !document.getElementById('whatifCourse').value) {
+                document.getElementById('whatifCourse').value = Object.keys(coursesData)[0];
+                calcWhatIf();
+            }
+        }
+
+        function runComparison() {
+            const kA = document.getElementById('cmpA').value;
+            const kB = document.getElementById('cmpB').value;
+            const result = document.getElementById('compareResult');
+            const empty  = document.getElementById('compareEmpty');
+            if (!kA || !kB || kA === kB) { result.style.display='none'; empty.style.display='block'; return; }
+            result.style.display='block'; empty.style.display='none';
+
+            const a = coursesData[kA], b = coursesData[kB];
+            // derived scores
+            const aScores = [a.quality, a.avgGrade, a.gaps.length===0?95:a.gaps.length===1?82:68, a.teachingMethods.length*20+40, a.assessmentMethods.length*18+40];
+            const bScores = [b.quality, b.avgGrade, b.gaps.length===0?95:b.gaps.length===1?82:68, b.teachingMethods.length*20+40, b.assessmentMethods.length*18+40];
+            const dims = ['الجودة الكلية','متوسط الأداء','توافق المخرجات','تنوع التدريس','شمولية التقييم'];
+
+            const statsHtml = [
+                ['الجودة',   a.quality+'%',  b.quality+'%'],
+                ['المتوسط',  a.avgGrade+'%', b.avgGrade+'%'],
+                ['الفجوات',  a.gaps.length,  b.gaps.length],
+                ['الطلاب',   a.students,     b.students],
+            ].map(([k,va,vb]) => `
+                <div class="compare-stat-row">
+                    <div style="text-align:right;"><span class="compare-val-a">${va}</span></div>
+                    <div class="compare-key">${k}</div>
+                    <div style="text-align:left;"><span class="compare-val-b">${vb}</span></div>
+                </div>`).join('');
+            document.getElementById('compareStats').innerHTML =
+                `<div style="margin-bottom:10px;"><p style="color:#3b82f6;font-weight:700;font-size:13px;text-align:right">${a.code}</p></div>` +
+                statsHtml +
+                `<div style="margin-top:10px;"><p style="color:#ec4899;font-weight:700;font-size:13px;text-align:right">${b.code}</p></div>`;
+
+            const rCtx = document.getElementById('compareRadarChart');
+            if (rCtx) {
+                if (radarChart) radarChart.destroy();
+                radarChart = new Chart(rCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: dims,
+                        datasets: [
+                            { label: a.code, data: aScores.map(v=>Math.min(v,100)), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.15)', pointBackgroundColor:'#3b82f6', borderWidth:2 },
+                            { label: b.code, data: bScores.map(v=>Math.min(v,100)), borderColor:'#ec4899', backgroundColor:'rgba(236,72,153,.15)', pointBackgroundColor:'#ec4899', borderWidth:2 }
+                        ]
+                    },
+                    options: {
+                        responsive:true, maintainAspectRatio:false,
+                        scales: { r: { min:0, max:100, ticks:{stepSize:20,color:'#64748b',font:{size:10}}, grid:{color:'rgba(148,163,184,.15)'}, pointLabels:{color:'#cbd5e1',font:{size:11}} } },
+                        plugins: { legend: { position:'bottom', labels:{padding:12,font:{size:12}} } },
+                        animation: { duration:800 }
+                    }
+                });
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // WHAT-IF
+        // ═══════════════════════════════════════════════════════
+        function calcWhatIf() {
+            const key = document.getElementById('whatifCourse')?.value;
+            if (!key || !coursesData[key]) return;
+            const base = coursesData[key].quality;
+            const s1 = +document.getElementById('s1').value;
+            const s2 = +document.getElementById('s2').value;
+            const s3 = +document.getElementById('s3').value;
+            const s4 = +document.getElementById('s4').value;
+            document.getElementById('v1').textContent = '+'+s1+'%';
+            document.getElementById('v2').textContent = '+'+s2+'%';
+            document.getElementById('v3').textContent = '+'+s3+'%';
+            document.getElementById('v4').textContent = '+'+s4+'%';
+            const projected = Math.min(99, base + s1 + s2 + s3 + s4);
+            document.getElementById('whatifScore').textContent = projected.toFixed(1) + '%';
+            const delta = (projected - base).toFixed(1);
+            const badge = document.getElementById('whatifBadge');
+            const desc  = document.getElementById('whatifDesc');
+            if (delta > 0) {
+                badge.innerHTML = `<span class="whatif-badge">↑ تحسن +${delta}% عن الوضع الحالي (${base}%)</span>`;
+                desc.textContent = projected >= 88 ? '🌟 ممتاز! المقرر سيصل لمستوى الامتياز بتطبيق هذه التوصيات.' :
+                                   projected >= 80 ? '✅ جيد. المقرر سيتحسن بشكل ملحوظ.' : '⚠️ لا تزال هناك مخرجات تحتاج إلى تغطية إضافية.';
+            } else {
+                badge.innerHTML = `<span style="color:#94a3b8;font-size:13px;">الجودة الحالية: ${base}% — حرّك الأشرطة لمحاكاة التحسين</span>`;
+                desc.textContent = '';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // INIT OVERRIDE — run everything on load
+        // ═══════════════════════════════════════════════════════
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                setLoaderStatus('🔥 جاري الاتصال بـ Firebase...');
+                await seedFirebaseIfEmpty();
+                setLoaderStatus('📚 جاري تحميل المقررات...');
+                await loadCoursesFromFirebase();
+                setLoaderStatus('🕘 جاري تحميل السجل...');
+            } catch(e) {
+                console.warn('Firebase error, using seed data:', e);
+                Object.assign(coursesData, SEED_COURSES);
+            }
+            // Hide loader and show app
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.add('fade-out');
+            setTimeout(() => overlay.style.display = 'none', 600);
+
+            renderCourseCards();
+            await renderHistoryPage();
+            populateCompareSelects();
+            calcWhatIf();
+            requestAnimationFrame(() => setTimeout(initDashboardCharts, 100));
+        });
+
+
+        window.addEventListener('click', function(e) {
+            const modal = document.getElementById('courseModal');
+            if (e.target === modal) modal.classList.remove('active');
+        });
+    </script>
+
+</body>
+</html>
